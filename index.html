@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoSync · Clearly.Hub Integration Demo</title>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Header (always visible) ─────────────────────────── -->
+<header class="site-header">
+    <div class="site-header-inner">
+        <div class="brand">
+            <div class="brand-mark">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0b0f19" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14.93-4M20 12a8 8 0 0 1-14.93 4"/><polyline points="19 4 19 8 15 8"/><polyline points="5 20 5 16 9 16"/></svg>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">geosync<span class="brand-dot">_</span></span>
+                <span class="brand-tagline">geodata optimizer</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <span id="app-user-chip" class="user-chip hidden"></span>
+            <button id="home-btn" class="hbtn hbtn-ghost hidden">Home</button>
+            <button id="sign-out-btn" class="hbtn hbtn-danger hidden">Sign out</button>
+        </div>
+    </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SESSION PANEL — plan/usage & connection controls, kept off the -->
+<!-- top bar since these are process-relevant, not global nav.      -->
+<!-- ══════════════════════════════════════════════════════ -->
+<aside id="session-panel" class="session-panel hidden">
+    <div class="session-card">
+        <div class="session-card-label">Plan</div>
+        <span id="header-sub-pill" class="sub-pill hidden">No plan</span>
+        <div id="usage-bar" class="usage-bar"><div id="usage-bar-fill" class="usage-bar-fill"></div></div>
+        <div id="usage-count-text" class="usage-count-text">0 / 1 optimizations used</div>
+        <button id="manage-billing-btn" class="hbtn hbtn-ghost">Manage plan</button>
+    </div>
+    <div class="session-card">
+        <div class="session-card-label">Clearly.Hub Connection</div>
+        <span id="hub-user-chip" class="user-chip hidden"></span>
+        <button id="disconnect-hub-btn" class="hbtn hbtn-ghost">Disconnect Clearly.Hub</button>
+    </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- APP LOGIN — GeoSync's own account gate (fake; any credentials work) -->
+<!-- ══════════════════════════════════════════════════════ -->
+<main id="app-login-view">
+    <div class="login-shell">
+        <div class="wizard-panel login-card">
+            <div class="login-brand-mark">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0b0f19" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14.93-4M20 12a8 8 0 0 1-14.93 4"/><polyline points="19 4 19 8 15 8"/><polyline points="5 20 5 16 9 16"/></svg>
+            </div>
+            <h1 class="login-title">Sign in to GeoSync</h1>
+            <p class="login-subtitle">Sign in with your GeoSync account.</p>
+            <form id="app-login-form">
+                <div class="form-row">
+                    <label class="form-label" for="app-username-input">Username</label>
+                    <input id="app-username-input" class="text-input" type="text" placeholder="e.g. jane.doe" autocomplete="username">
+                </div>
+                <div class="form-row">
+                    <label class="form-label" for="app-password-input">Password</label>
+                    <input id="app-password-input" class="text-input" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-accent w-full">Sign in</button>
+            </form>
+            <p class="login-hint">Demo mode &mdash; any username &amp; password will work.</p>
+        </div>
+    </div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- APP HOME — GeoSync's own home screen; Clearly.Hub is an -->
+<!-- optional connection made from here, not the main gate.  -->
+<!-- ══════════════════════════════════════════════════════ -->
+<main id="app-home-view" class="hidden">
+
+    <section class="hero">
+        <div class="hero-inner">
+            <div id="home-welcome" class="eyebrow">// welcome back</div>
+            <h1 class="hero-title">Optimize your geodata,<br>then <span>publish it back.</span></h1>
+            <p class="hero-subtitle">GeoSync analyzes and optimizes incoming geodata, then publishes the result directly back to the source platform.</p>
+        </div>
+    </section>
+
+    <section class="catalog-section">
+        <div class="catalog-label">// catalog connections</div>
+        <div class="catalog-grid">
+            <div class="catalog-card catalog-card-active">
+                <div class="catalog-card-top">
+                    <div class="catalog-logo catalog-logo-hub">CH</div>
+                    <span class="catalog-status catalog-status-live">Available</span>
+                </div>
+                <div class="catalog-card-title">Clearly.Hub</div>
+                <div class="catalog-card-desc">Pick a hub, choose a dataset, and publish optimized geodata straight back to the platform.</div>
+                <button id="connect-hub-btn" class="btn btn-accent w-full">Login to Clearly.Hub</button>
+            </div>
+
+            <div class="catalog-card catalog-card-disabled">
+                <div class="catalog-card-top">
+                    <div class="catalog-logo">TC</div>
+                    <span class="catalog-status">Coming soon</span>
+                </div>
+                <div class="catalog-card-title">Terra Catalog</div>
+                <div class="catalog-card-desc">Not yet connected to this workspace.</div>
+                <button class="btn btn-ghost w-full" disabled>Connect</button>
+            </div>
+
+            <div class="catalog-card catalog-card-disabled">
+                <div class="catalog-card-top">
+                    <div class="catalog-logo">CS</div>
+                    <span class="catalog-status">Coming soon</span>
+                </div>
+                <div class="catalog-card-title">CityStack Data</div>
+                <div class="catalog-card-desc">Not yet connected to this workspace.</div>
+                <button class="btn btn-ghost w-full" disabled>Connect</button>
+            </div>
+
+            <div class="catalog-card catalog-card-disabled">
+                <div class="catalog-card-top">
+                    <div class="catalog-logo">OF</div>
+                    <span class="catalog-status">Coming soon</span>
+                </div>
+                <div class="catalog-card-title">OpenField Registry</div>
+                <div class="catalog-card-desc">Not yet connected to this workspace.</div>
+                <button class="btn btn-ghost w-full" disabled>Connect</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="spec-grid">
+        <div class="spec-block">
+            <div class="spec-num">01</div>
+            <div class="spec-title">Secure identity</div>
+            <div class="spec-desc">OAuth 2.0 + PKCE via Clearly.Hub. This app never sees or stores your Clearly.Hub password.</div>
+        </div>
+        <div class="spec-block">
+            <div class="spec-num">02</div>
+            <div class="spec-title">Optimized write-back</div>
+            <div class="spec-desc">Your data is optimized, then published back using the same GraphQL API the platform itself uses.</div>
+        </div>
+        <div class="spec-block">
+            <div class="spec-num">03</div>
+            <div class="spec-title">Plan-gated access</div>
+            <div class="spec-desc">First Clearly.Hub connection prompts a subscription choice before the optimizer unlocks.</div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- APP VIEW — the write-back wizard, visible once logged in -->
+<!-- ══════════════════════════════════════════════════════ -->
+<main id="app-view" class="hidden">
+
+    <div class="wizard-shell">
+
+        <div id="stepper" class="stepper">
+            <div class="step-dot-wrap" data-step="1">
+                <div class="step-dot">1</div>
+                <div class="step-dot-label">Dataset</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-dot-wrap" data-step="2">
+                <div class="step-dot">2</div>
+                <div class="step-dot-label">Resource</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-dot-wrap" data-step="3">
+                <div class="step-dot">3</div>
+                <div class="step-dot-label">Hub</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-dot-wrap" data-step="4">
+                <div class="step-dot">4</div>
+                <div class="step-dot-label">Dataset</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-dot-wrap" data-step="5">
+                <div class="step-dot">5</div>
+                <div class="step-dot-label">Publish</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-dot-wrap" data-step="6">
+                <div class="step-dot">6</div>
+                <div class="step-dot-label">Done</div>
+            </div>
+        </div>
+
+        <!-- Shown instead of the wizard once the plan's optimization quota is used up -->
+        <div id="quota-exceeded-panel" class="wizard-panel hidden">
+            <div class="quota-icon">&#9888;</div>
+            <h2 class="wizard-panel-title">You&rsquo;ve reached your optimization limit</h2>
+            <p class="wizard-panel-desc">Your <strong id="quota-tier-name">Professional</strong> plan includes <strong id="quota-limit-text">3</strong> optimization&#8288;(s), and you&rsquo;ve used all of them.</p>
+            <p class="wizard-panel-desc">Use <strong>Manage plan</strong> in the panel on the right to upgrade for more, or <strong>Disconnect Clearly.Hub</strong> to switch accounts. The wizard stays locked until then.</p>
+        </div>
+
+        <!-- STEP 1 — pick a dataset to optimize, from the full Clearly.Hub catalog -->
+        <div id="step-panel-source-dataset" class="wizard-panel">
+            <h2 class="wizard-panel-title">Which dataset do you want to optimize?</h2>
+            <p class="wizard-panel-desc">Browse the Clearly.Hub catalog and pick the dataset whose data you want to optimize and republish.</p>
+            <div class="filter-row">
+                <input id="source-dataset-search-input" class="text-input" type="text" placeholder="Search datasets&hellip;">
+                <select id="source-dataset-hub-filter" class="select-input">
+                    <option value="">All owner hubs</option>
+                </select>
+            </div>
+            <div id="source-dataset-list" class="option-list">
+                <p class="option-list-empty">Loading the catalog&hellip;</p>
+            </div>
+            <div id="source-dataset-error" class="wizard-error hidden"></div>
+            <div class="wizard-actions">
+                <button id="source-dataset-home-btn" class="btn btn-ghost" type="button">Home</button>
+                <button id="source-dataset-next-btn" class="btn btn-accent" disabled>Continue</button>
+            </div>
+        </div>
+
+        <!-- STEP 2 — pick which resource on that dataset to optimize -->
+        <div id="step-panel-source-resource" class="wizard-panel hidden">
+            <h2 class="wizard-panel-title">Which resource in <span id="source-resource-dataset-name">&hellip;</span> do you want to optimize?</h2>
+            <p class="wizard-panel-desc">Pick the specific resource whose data GeoSync should optimize.</p>
+            <div id="source-resource-list" class="option-list">
+                <p class="option-list-empty">Loading resources&hellip;</p>
+            </div>
+            <div id="source-resource-error" class="wizard-error hidden"></div>
+            <div class="wizard-actions">
+                <button id="source-resource-back-btn" class="btn btn-ghost" type="button">Back</button>
+                <button id="source-resource-next-btn" class="btn btn-accent" disabled>Optimize this resource</button>
+            </div>
+        </div>
+
+        <!-- STEP 3 — choose the destination hub -->
+        <div id="step-panel-hub" class="wizard-panel hidden">
+            <h2 class="wizard-panel-title">Where do you want to save the optimized dataset?</h2>
+            <p class="wizard-panel-desc">GeoSync will query this hub&rsquo;s existing datasets in the next step, so pick the hub that should own the optimized data.</p>
+            <input id="hub-search-input" class="text-input hub-search-input" type="text" placeholder="Search hubs&hellip;">
+            <div id="hub-list" class="option-list">
+                <p class="option-list-empty">Loading your hubs&hellip;</p>
+            </div>
+            <div id="hub-error" class="wizard-error hidden"></div>
+            <div class="wizard-actions">
+                <button id="hub-back-btn" class="btn btn-ghost" type="button">Back</button>
+                <button id="hub-next-btn" class="btn btn-accent" disabled>Continue</button>
+            </div>
+        </div>
+
+        <!-- STEP 4 — choose or create the destination dataset -->
+        <div id="step-panel-dataset" class="wizard-panel hidden">
+            <h2 class="wizard-panel-title">Choose a dataset in <span id="dataset-hub-name">&hellip;</span></h2>
+            <p class="wizard-panel-desc">Attach the optimized resource to an existing dataset, or spin up a new one for it.</p>
+            <div id="dataset-list" class="option-list">
+                <p class="option-list-empty">Loading datasets&hellip;</p>
+            </div>
+
+            <div id="new-dataset-form" class="inline-form hidden">
+                <div class="form-row">
+                    <label class="form-label" for="new-dataset-title-input">New dataset title</label>
+                    <input id="new-dataset-title-input" class="text-input" type="text" placeholder="e.g. Q3 Traffic Sensor Export">
+                </div>
+                <div class="form-row">
+                    <label class="form-label" for="new-dataset-desc-input">Description <span class="form-optional">optional</span></label>
+                    <textarea id="new-dataset-desc-input" class="text-input" rows="2" placeholder="What is this dataset?"></textarea>
+                </div>
+                <div class="form-row">
+                    <label class="form-label" for="new-dataset-findability-select">Findability</label>
+                    <select id="new-dataset-findability-select" class="select-input">
+                        <option value="PUBLIC">Public &mdash; visible to all Clearly.Hub users</option>
+                        <option value="LIMITED">Limited &mdash; visible only to this hub</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="dataset-error" class="wizard-error hidden"></div>
+            <div class="wizard-actions">
+                <button id="dataset-back-btn" class="btn btn-ghost" type="button">Back</button>
+                <button id="dataset-next-btn" class="btn btn-accent" disabled>Continue</button>
+            </div>
+        </div>
+
+        <!-- STEP 5 — review the auto-filled optimized resource & publish -->
+        <div id="step-panel-resource" class="wizard-panel hidden">
+            <h2 class="wizard-panel-title">Optimize &amp; publish to <span id="resource-dataset-name">&hellip;</span></h2>
+            <p class="wizard-panel-desc">Pre-filled from the source resource &mdash; adjust anything before publishing.</p>
+
+            <div class="form-row">
+                <label class="form-label" for="resource-name-input">Dataset name</label>
+                <input id="resource-name-input" class="text-input" type="text" placeholder="e.g. Sensor readings — August">
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="resource-format-select">Format</label>
+                <select id="resource-format-select" class="select-input">
+                    <option value="3dpointclouds">3D Point Clouds</option>
+                    <option value="3dterrain">3D Terrain</option>
+                    <option value="3dtiles">3D Tiles</option>
+                    <option value="api">API</option>
+                    <option value="api_documentation">API Documentation</option>
+                    <option value="bim">BIM</option>
+                    <option value="geojson">GeoJSON</option>
+                    <option value="sensor_data_mqtt">Sensor Data (MQTT)</option>
+                    <option value="sensor_data_rest">Sensor Data (REST)</option>
+                    <option value="sensor_data_websocket">Sensor Data (WebSocket)</option>
+                    <option value="tilejson">TileJSON</option>
+                    <option value="tms">TMS</option>
+                    <option value="wfs">WFS</option>
+                    <option value="wms">WMS</option>
+                    <option value="wmts">WMTS</option>
+                    <option value="xyz">XYZ</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="resource-url-input">Source data URL</label>
+                <input id="resource-url-input" class="text-input" type="text" placeholder="https://service.example.com/...">
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="resource-desc-input">Description <span class="form-optional">optional</span></label>
+                <textarea id="resource-desc-input" class="text-input" rows="2" placeholder="What does this data contain?"></textarea>
+            </div>
+
+            <div id="resource-error" class="wizard-error hidden"></div>
+            <div class="wizard-actions">
+                <button id="resource-back-btn" class="btn btn-ghost" type="button">Back</button>
+                <button id="resource-submit-btn" class="btn btn-accent" type="button">Publish</button>
+            </div>
+        </div>
+
+        <!-- STEP 6 — done -->
+        <div id="step-panel-done" class="wizard-panel hidden">
+            <div class="done-check">&#10003;</div>
+            <h2 class="wizard-panel-title">Optimized dataset published</h2>
+            <div id="done-summary" class="done-summary"></div>
+            <div class="wizard-actions wizard-actions-center">
+                <button id="register-another-btn" class="btn btn-accent" type="button">Optimize another dataset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Developer Console ─────────────────────────────── -->
+    <div id="dev-console" class="dev-console dev-console-collapsed">
+        <div class="dev-header" id="dev-console-toggle" title="Expand developer console">
+            <span class="dev-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                developer console
+            </span>
+            <div class="dev-header-right">
+                <span class="dev-badge">live demo</span>
+                <svg id="dev-console-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;transform:rotate(-90deg);"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+        </div>
+        <p class="dev-description">Track the real API calls this connector makes to Clearly.Hub.</p>
+
+        <div class="dev-tabs">
+            <button class="dev-tab active" data-dev-tab="authflow">Auth Flow</button>
+            <button class="dev-tab" data-dev-tab="apilog">API Log <span id="api-log-count" class="log-count hidden">0</span></button>
+            <button class="dev-tab" data-dev-tab="billing">Billing</button>
+            <button class="dev-tab" data-dev-tab="reference">Reference</button>
+        </div>
+
+        <div class="dev-panel-content">
+            <div class="dev-panel" data-dev-panel="authflow">
+                <p class="dev-panel-intro">GeoSync&rsquo;s landing page is <strong>public</strong>. Login is only triggered when a visitor wants to contribute data, using <strong>OAuth 2.0 Authorization Code&nbsp;+&nbsp;PKCE</strong>.</p>
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="flow-step-num">1</div>
+                        <div class="flow-step-body">
+                            <div class="flow-step-title">Generate PKCE challenge</div>
+                            <div class="flow-step-desc">A random <code>code_verifier</code> and its SHA-256 hash are created client-side before redirecting.</div>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-num">2</div>
+                        <div class="flow-step-body">
+                            <div class="flow-step-title">Redirect to Clearly.Hub</div>
+                            <div class="flow-step-desc">The user authenticates on <code>auth.clearly.app</code> — GeoSync never sees the password.</div>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-num">3</div>
+                        <div class="flow-step-body">
+                            <div class="flow-step-title">Exchange code for tokens</div>
+                            <div class="flow-step-desc">The returned <code>code</code> is exchanged for an <code>access_token</code> used on every API call below.</div>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-num">4</div>
+                        <div class="flow-step-body">
+                            <div class="flow-step-title">Subscription check &rarr; wizard</div>
+                            <div class="flow-step-desc">See the <strong>Billing</strong> tab — only after a plan is confirmed does the optimize-and-publish wizard appear.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dev-panel hidden" data-dev-panel="apilog">
+                <p class="dev-panel-intro">Live log of API requests made during this session.</p>
+                <div id="api-log-list" class="api-log-list">
+                    <p class="log-empty-msg">No requests yet.</p>
+                </div>
+            </div>
+
+            <div class="dev-panel hidden" data-dev-panel="billing">
+                <p class="dev-panel-intro">GeoSync sends the user to pick a plan immediately after <strong>every</strong> Clearly.Hub login — no manual "billing" button needed, and no skipping it even if a plan was already chosen before.</p>
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <div class="flow-step-num">1</div>
+                        <div class="flow-step-body">
+                            <div class="flow-step-title">Tokens issued &rarr; forget any prior plan</div>
+                            <div class="flow-step-desc">Right after the OAuth exchange, any previously stored plan is cleared so the check below can&rsquo;t short-circuit the prompt.</div>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-num">2</div>
+                        <div class="flow-step-body">
+                            <div class="flow-step-title">Always redirect to the Billing Component</div>
+                            <div class="flow-step-desc">Every login &mdash; first time or the hundredth &mdash; goes straight to the hosted Billing Component.</div>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <div class="flow-step-num">3</div>
+                        <div class="flow-step-body">
+                            <div class="flow-step-title">Redirect back &rarr; straight into the wizard</div>
+                            <div class="flow-step-desc">Clearly.Hub redirects back with the chosen plan; the user lands in Step 1 immediately.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="billing-note">This is intentionally re-prompted on every login, even for returning users with an active plan. Each tier also caps how many optimizations you get per plan confirmation &mdash; Starter: 1, Professional: 3, Enterprise: unlimited &mdash; tracked client-side and reset whenever a plan is (re)confirmed. Use <strong>Manage plan</strong> in the session panel to change tiers, or check your remaining usage there any time.</div>
+            </div>
+
+            <div class="dev-panel hidden" data-dev-panel="reference">
+                <p class="dev-panel-intro">Real GraphQL &amp; REST calls made by this connector. All require <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+                <div class="ref-list">
+                    <div class="ref-item">
+                        <span class="ref-method ref-get">GQL</span>
+                        <div class="ref-details">
+                            <code>DatasetCatalog</code>
+                            <span>Fetches the browsable catalog for Step 1 — search &amp; owner-hub filter both run client-side against this cached result</span>
+                        </div>
+                    </div>
+                    <div class="ref-item">
+                        <span class="ref-method ref-get">GQL</span>
+                        <div class="ref-details">
+                            <code>DatasetDetail</code>
+                            <span>Fetches the full resource list for the chosen source dataset in Step 2</span>
+                        </div>
+                    </div>
+                    <div class="ref-item">
+                        <span class="ref-method ref-get">GQL</span>
+                        <div class="ref-details">
+                            <code>Hubs</code>
+                            <span>Populates Step 3 with hubs you belong to</span>
+                        </div>
+                    </div>
+                    <div class="ref-item">
+                        <span class="ref-method ref-get">GQL</span>
+                        <div class="ref-details">
+                            <code>DatasetsForHub</code>
+                            <span>Lists the chosen destination hub&rsquo;s existing datasets in Step 4</span>
+                        </div>
+                    </div>
+                    <div class="ref-item">
+                        <span class="ref-method ref-post">GQL</span>
+                        <div class="ref-details">
+                            <code>createDataset</code>
+                            <span>Creates a new destination dataset when the user opts not to reuse an existing one</span>
+                        </div>
+                    </div>
+                    <div class="ref-item">
+                        <span class="ref-method ref-post">GQL</span>
+                        <div class="ref-details">
+                            <code>addDatasetResource</code>
+                            <span>Registers the source endpoint as a new resource on the chosen/created destination dataset</span>
+                        </div>
+                    </div>
+                    <div class="ref-item">
+                        <span class="ref-method ref-get">GET</span>
+                        <div class="ref-details">
+                            <code>/api/apps?ssoClientId=&hellip;</code>
+                            <span>Resolves this app&rsquo;s Clearly.Hub App ID</span>
+                        </div>
+                    </div>
+                    <div class="ref-item">
+                        <span class="ref-method ref-get">GET</span>
+                        <div class="ref-details">
+                            <code>/api/me/app-subscriptions/{appId}</code>
+                            <span>Checked right after login to decide whether to auto-redirect to billing</span>
+                        </div>
+                    </div>
+                </div>
+                <a href="https://hub.clearly.app" target="_blank" rel="noopener noreferrer" class="ref-docs-link">View Full API Documentation &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<div id="loading-overlay" class="hidden">
+    <div class="loading-card">
+        <div class="loading-spinner"></div>
+        <div id="loading-text" class="loading-text">Working&hellip;</div>
+    </div>
+</div>
+
+<!-- Fake "optimizing" sequence shown between picking a source resource (Step 2) and choosing where to publish it (Step 3) -->
+<div id="optimize-overlay" class="hidden">
+    <div class="optimize-card">
+        <div class="optimize-ring">
+            <svg width="40" height="40" viewBox="0 0 40 40">
+                <circle class="optimize-ring-track" cx="20" cy="20" r="17"/>
+                <circle id="optimize-ring-fill" class="optimize-ring-fill" cx="20" cy="20" r="17"/>
+            </svg>
+            <span id="optimize-ring-pct" class="optimize-ring-pct">0%</span>
+        </div>
+        <div class="optimize-title">Optimizing your data&hellip;</div>
+        <ul id="optimize-stage-list" class="optimize-stage-list"></ul>
+    </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+document.querySelectorAll('.dev-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-dev-tab');
+        document.querySelectorAll('.dev-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.dev-panel').forEach(p => p.classList.add('hidden'));
+        btn.classList.add('active');
+        const panel = document.querySelector(`.dev-panel[data-dev-panel="${tab}"]`);
+        if (panel) panel.classList.remove('hidden');
+    });
+});
+document.getElementById('dev-console-toggle').addEventListener('click', () => {
+    const panel = document.getElementById('dev-console');
+    panel.classList.toggle('dev-console-collapsed');
+    const isCollapsed = panel.classList.contains('dev-console-collapsed');
+    document.getElementById('dev-console-toggle').title = isCollapsed
+        ? 'Expand developer console'
+        : 'Collapse developer console';
+});
+</script>
+
+</body>
+</html>
