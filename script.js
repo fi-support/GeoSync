@@ -40,10 +40,9 @@ const quotaLimitText = document.getElementById('quota-limit-text');
 const stepPanels = {
     1: document.getElementById('step-panel-source-dataset'),
     2: document.getElementById('step-panel-source-resource'),
-    3: document.getElementById('step-panel-hub'),
-    4: document.getElementById('step-panel-dataset'),
-    5: document.getElementById('step-panel-resource'),
-    6: document.getElementById('step-panel-done'),
+    3: document.getElementById('step-panel-dataset'),
+    4: document.getElementById('step-panel-resource'),
+    5: document.getElementById('step-panel-done'),
 };
 
 // Step 1 — source dataset (browse the Clearly.Hub catalog)
@@ -61,14 +60,7 @@ const sourceResourceError = document.getElementById('source-resource-error');
 const sourceResourceBackBtn = document.getElementById('source-resource-back-btn');
 const sourceResourceNextBtn = document.getElementById('source-resource-next-btn');
 
-// Step 3 — destination hub
-const hubSearchInput = document.getElementById('hub-search-input');
-const hubList = document.getElementById('hub-list');
-const hubError = document.getElementById('hub-error');
-const hubBackBtn = document.getElementById('hub-back-btn');
-const hubNextBtn = document.getElementById('hub-next-btn');
-
-// Step 4 — destination dataset
+// Step 3 — destination dataset (destination hub is fixed, see DESTINATION_HUB)
 const datasetHubName = document.getElementById('dataset-hub-name');
 const datasetList = document.getElementById('dataset-list');
 const newDatasetForm = document.getElementById('new-dataset-form');
@@ -79,7 +71,7 @@ const datasetError = document.getElementById('dataset-error');
 const datasetBackBtn = document.getElementById('dataset-back-btn');
 const datasetNextBtn = document.getElementById('dataset-next-btn');
 
-// Step 5 — publish (pre-filled from the source resource)
+// Step 4 — publish (pre-filled from the source resource)
 const resourceDatasetName = document.getElementById('resource-dataset-name');
 const resourceNameInput = document.getElementById('resource-name-input');
 const resourceFormatSelect = document.getElementById('resource-format-select');
@@ -105,8 +97,11 @@ const BASE_RESOURCE_FORMATS = [
 let datasetCatalog = [];           // cached, unfiltered catalog for Step 1's client-side search/filter
 let selectedSourceDataset = null;  // { _id, title, ownerHub: { _id, name } }
 let selectedSourceResource = null; // { _id, name, format, url, description }
-let selectedHub = null;            // { _id, name } — destination hub
 let selectedDataset = null;        // { _id, title, isNew } — destination dataset
+
+// Writes are locked to this single hub — keeps this demo app from scattering
+// datasets across the production platform.
+const DESTINATION_HUB = { _id: '6672c9290fd2189f644720db', name: 'FI Demo' };
 
 // --- API Call Log (dev console) ---
 const apiCallLog = [];
@@ -259,7 +254,7 @@ async function graphqlRequest(query, variables) {
 
 // --- Wizard: Step navigation ---
 function goToStep(n) {
-    for (let i = 1; i <= 6; i++) stepPanels[i].classList.toggle('hidden', i !== n);
+    for (let i = 1; i <= 5; i++) stepPanels[i].classList.toggle('hidden', i !== n);
     document.querySelectorAll('.step-dot-wrap').forEach(el => {
         const s = parseInt(el.dataset.step, 10);
         el.classList.toggle('active', s === n);
@@ -297,14 +292,14 @@ function resetWizardForms() {
     resourceDescInput.value = '';
     setResourceFormat(null);
     hideError(sourceDatasetError); hideError(sourceResourceError);
-    hideError(hubError); hideError(datasetError); hideError(resourceError);
+    hideError(datasetError); hideError(resourceError);
 }
 
 // Blocks the entire wizard except the session panel's "Manage plan" / "Disconnect
 // Clearly.Hub" (and the header's "Sign out") once the plan's optimization quota is spent.
 function showQuotaExceeded() {
     stepper.classList.add('hidden');
-    for (let i = 1; i <= 6; i++) stepPanels[i].classList.add('hidden');
+    for (let i = 1; i <= 5; i++) stepPanels[i].classList.add('hidden');
     quotaTierName.textContent = formatTierName(localStorage.getItem('subscriptionName'));
     quotaLimitText.textContent = String(getTierLimit());
     quotaExceededPanel.classList.remove('hidden');
@@ -318,11 +313,9 @@ function resetWizard() {
 
     selectedSourceDataset = null;
     selectedSourceResource = null;
-    selectedHub = null;
     selectedDataset = null;
     sourceDatasetNextBtn.disabled = true;
     sourceResourceNextBtn.disabled = true;
-    hubNextBtn.disabled = true;
     datasetNextBtn.disabled = true;
     sourceDatasetSearchInput.value = '';
     sourceDatasetHubFilter.value = '';
@@ -487,128 +480,7 @@ function selectSourceResource(r, cardEl) {
     }
 }
 
-// --- Step 3: Destination hub selection (rendered as a hierarchy, like the platform's own hub tree) ---
-let hubTree = []; // full, unfiltered tree — kept so search can re-filter without refetching
-
-async function loadHubs() {
-    hubList.innerHTML = '<p class="option-list-empty">Loading your hubs…</p>';
-    hubNextBtn.disabled = true;
-    hubSearchInput.value = '';
-    try {
-        const query = `query Hubs { hubs(rootHubsOnly: false) {
-            results {
-                ... on Hub { _id name parent { _id } }
-                ... on PublicHub { _id name parent { _id } }
-            }
-        } }`;
-        const data = await graphqlRequest(query, {});
-        const hubs = data?.hubs?.results || [];
-        if (!hubs.length) {
-            hubList.innerHTML = '<p class="option-list-empty">No hubs found for your account.</p>';
-            return;
-        }
-        hubTree = buildHubTree(hubs);
-        renderHubList('');
-    } catch (e) {
-        console.error('Failed to load hubs:', e);
-        hubList.innerHTML = '<p class="option-list-empty">Failed to load hubs.</p>';
-        showError(hubError, e.message);
-    }
-}
-
-// Turns the flat `hubs` list (each with an optional parent._id) into a nested tree.
-function buildHubTree(hubs) {
-    const byId = new Map(hubs.map(h => [h._id, { _id: h._id, name: h.name, children: [] }]));
-    const roots = [];
-    hubs.forEach(h => {
-        const node = byId.get(h._id);
-        const parentId = h.parent?._id;
-        if (parentId && byId.has(parentId)) {
-            byId.get(parentId).children.push(node);
-        } else {
-            roots.push(node);
-        }
-    });
-    const byName = (a, b) => a.name.localeCompare(b.name);
-    const sortRec = list => { list.sort(byName); list.forEach(n => sortRec(n.children)); };
-    sortRec(roots);
-    return roots;
-}
-
-// Keeps a node if its own name matches, or if any descendant matches.
-function filterHubTree(nodes, q) {
-    if (!q) return nodes;
-    const out = [];
-    nodes.forEach(node => {
-        const matchingChildren = filterHubTree(node.children, q);
-        if (node.name.toLowerCase().includes(q) || matchingChildren.length) {
-            out.push({ ...node, children: matchingChildren });
-        }
-    });
-    return out;
-}
-
-function renderHubList(query) {
-    const q = query.trim().toLowerCase();
-    const filtered = filterHubTree(hubTree, q);
-    hubList.innerHTML = '';
-    if (!filtered.length) {
-        hubList.innerHTML = '<p class="option-list-empty">No hubs match your search.</p>';
-        return;
-    }
-    // While searching, force every matching branch open so results are actually visible.
-    hubList.appendChild(renderHubTree(filtered, 0, !!q));
-    if (selectedHub) {
-        const row = hubList.querySelector(`[data-hub-id="${selectedHub._id}"]`);
-        if (row) row.classList.add('selected');
-    }
-}
-
-function renderHubTree(nodes, depth, forceExpanded) {
-    const wrap = document.createElement('div');
-    wrap.className = depth === 0 ? 'hub-tree-root' : (forceExpanded ? 'hub-children hub-children-visible' : 'hub-children');
-    nodes.forEach(node => {
-        const item = document.createElement('div');
-        item.className = 'hub-tree-node';
-
-        const hasChildren = node.children.length > 0;
-        const row = document.createElement('button');
-        row.type = 'button';
-        row.className = 'option-card';
-        row.dataset.hubId = node._id;
-        const icon = forceExpanded ? '&#9662;' : '&#9656;';
-        row.innerHTML = `${hasChildren ? `<span class="hub-toggle">${icon}</span>` : '<span class="hub-toggle hub-toggle-spacer"></span>'}<span class="option-radio"></span><span class="option-card-body"><div class="option-card-title">${escapeHtml(node.name)}</div></span>`;
-        row.addEventListener('click', (e) => {
-            if (hasChildren && e.target.closest('.hub-toggle')) {
-                toggleHubChildren(item, row.querySelector('.hub-toggle'));
-                return;
-            }
-            selectHub(node, row);
-        });
-        item.appendChild(row);
-
-        if (hasChildren) item.appendChild(renderHubTree(node.children, depth + 1, forceExpanded));
-        wrap.appendChild(item);
-    });
-    return wrap;
-}
-
-function toggleHubChildren(itemEl, toggleEl) {
-    const childWrap = itemEl.querySelector(':scope > .hub-children');
-    if (!childWrap) return;
-    const isVisible = childWrap.classList.toggle('hub-children-visible');
-    toggleEl.innerHTML = isVisible ? '&#9662;' : '&#9656;';
-}
-
-function selectHub(hub, rowEl) {
-    selectedHub = hub;
-    hubList.querySelectorAll('.option-card').forEach(r => r.classList.remove('selected'));
-    rowEl.classList.add('selected');
-    hubNextBtn.disabled = false;
-    hideError(hubError);
-}
-
-// --- Step 2: Dataset selection / creation ---
+// --- Step 3: Dataset selection / creation (destination hub is fixed to DESTINATION_HUB) ---
 async function loadDatasets(hubId) {
     datasetList.innerHTML = '<p class="option-list-empty">Loading datasets…</p>';
     datasetNextBtn.disabled = true;
@@ -663,7 +535,7 @@ async function handleDatasetNext() {
     if (!selectedDataset.isNew) {
         resourceDatasetName.textContent = selectedDataset.title;
         prefillResourceForm();
-        goToStep(5);
+        goToStep(4);
         return;
     }
 
@@ -678,14 +550,14 @@ async function handleDatasetNext() {
         const mutation = `mutation CreateDataset($dataset: DatasetInput!) {
             createDataset(dataset: $dataset) { _id title }
         }`;
-        const variables = { dataset: { title, description: description || undefined, ownerHubId: selectedHub._id, findability } };
+        const variables = { dataset: { title, description: description || undefined, ownerHubId: DESTINATION_HUB._id, findability } };
         const data = await graphqlRequest(mutation, variables);
         const created = data.createDataset;
         selectedDataset = { _id: created._id, title: created.title, isNew: false };
         resourceDatasetName.textContent = created.title;
         prefillResourceForm();
         hideLoading();
-        goToStep(5);
+        goToStep(4);
     } catch (e) {
         console.error('Failed to create dataset:', e);
         hideLoading();
@@ -695,7 +567,7 @@ async function handleDatasetNext() {
     }
 }
 
-// --- Step 5: Publish the optimized resource ---
+// --- Step 4: Publish the optimized resource ---
 async function handleResourceSubmit() {
     hideError(resourceError);
     const name = resourceNameInput.value.trim();
@@ -717,7 +589,7 @@ async function handleResourceSubmit() {
         const data = await graphqlRequest(mutation, variables);
         renderDoneSummary(data.addDatasetResource);
         hideLoading();
-        goToStep(6);
+        goToStep(5);
     } catch (e) {
         console.error('Failed to publish resource:', e);
         hideLoading();
@@ -730,15 +602,26 @@ async function handleResourceSubmit() {
 function renderDoneSummary(resource) {
     doneSummary.innerHTML = `
         <div><strong>Optimized from:</strong> ${escapeHtml(selectedSourceDataset.title)} &rarr; ${escapeHtml(selectedSourceResource.name || 'resource')}</div>
-        <div><strong>Destination hub:</strong> ${escapeHtml(selectedHub.name)}</div>
+        <div><strong>Destination hub:</strong> ${escapeHtml(DESTINATION_HUB.name)}</div>
         <div><strong>Destination dataset:</strong> ${escapeHtml(selectedDataset.title)}</div>
         <div><strong>Optimized dataset:</strong> ${escapeHtml(resource.name)} <code>${escapeHtml(resource.format)}</code></div>
         <div><strong>Resource ID:</strong> <code>${escapeHtml(resource._id)}</code></div>
     `;
 }
 
+// Wipes any cached Clearly.Hub connection state (token, plan, usage) so the demo
+// always restarts from a clean connect → OAuth → subscription flow, never a
+// silently-resumed session left over from an earlier run.
+function clearHubSession() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('idToken');
+    localStorage.removeItem('subscriptionName');
+    localStorage.removeItem('optimizeUsageCount');
+}
+
 // --- View Switching (two-layer: GeoSync app session, then Clearly.Hub connection) ---
 function showAppLogin() {
+    clearHubSession();
     hideLoading();
     appLoginView.classList.remove('hidden');
     appHomeView.classList.add('hidden');
@@ -851,6 +734,7 @@ async function render() {
 // --- GeoSync app login (fake — any credentials are accepted) ---
 function handleAppLogin(e) {
     e.preventDefault();
+    clearHubSession();
     const username = appUsernameInput.value.trim() || 'demo-user';
     localStorage.setItem('appUser', username);
     appLoginForm.reset();
@@ -919,9 +803,7 @@ function handleSignOut() {
 
 // Disconnects Clearly.Hub only — stays signed into the GeoSync app itself.
 function handleDisconnectHub() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('idToken');
-    localStorage.removeItem('subscriptionName');
+    clearHubSession();
     render();
 }
 
@@ -961,22 +843,15 @@ sourceResourceNextBtn.addEventListener('click', async () => {
     localStorage.setItem('optimizeUsageCount', String(getUsageCount() + 1));
     updateUsageDisplay();
     await runOptimizeAnimation();
+    datasetHubName.textContent = DESTINATION_HUB.name;
     goToStep(3);
-    loadHubs();
+    loadDatasets(DESTINATION_HUB._id);
 });
 
-hubSearchInput.addEventListener('input', () => renderHubList(hubSearchInput.value));
-hubBackBtn.addEventListener('click', () => goToStep(2));
-hubNextBtn.addEventListener('click', () => {
-    if (!selectedHub) return;
-    datasetHubName.textContent = selectedHub.name;
-    goToStep(4);
-    loadDatasets(selectedHub._id);
-});
-datasetBackBtn.addEventListener('click', () => goToStep(3));
+datasetBackBtn.addEventListener('click', () => goToStep(2));
 datasetNextBtn.addEventListener('click', handleDatasetNext);
 
-resourceBackBtn.addEventListener('click', () => goToStep(4));
+resourceBackBtn.addEventListener('click', () => goToStep(3));
 resourceSubmitBtn.addEventListener('click', handleResourceSubmit);
 
 registerAnotherBtn.addEventListener('click', resetWizard);

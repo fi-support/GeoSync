@@ -612,31 +612,6 @@ a { color: var(--accent); }
 }
 .option-card-new .option-card-title { color: var(--accent); }
 
-/* Hub hierarchy tree (Step 1) */
-.hub-tree-root, .hub-children {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-.hub-children {
-    display: none;
-    margin: 0.4rem 0 0 15px;
-    padding-left: 14px;
-    border-left: 1px dashed var(--border);
-}
-.hub-children.hub-children-visible { display: flex; }
-.hub-toggle {
-    width: 14px;
-    flex-shrink: 0;
-    font-size: 0.62rem;
-    color: var(--text-dim);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-.hub-toggle-spacer { visibility: hidden; }
-.hub-search-input { margin-bottom: 0.75rem; }
-
 /* Source dataset catalog: search + owner-hub filter row */
 .filter-row {
     display: flex;

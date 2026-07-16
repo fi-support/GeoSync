@@ -175,21 +175,16 @@
             <div class="step-line"></div>
             <div class="step-dot-wrap" data-step="3">
                 <div class="step-dot">3</div>
-                <div class="step-dot-label">Hub</div>
+                <div class="step-dot-label">Dataset</div>
             </div>
             <div class="step-line"></div>
             <div class="step-dot-wrap" data-step="4">
                 <div class="step-dot">4</div>
-                <div class="step-dot-label">Dataset</div>
+                <div class="step-dot-label">Publish</div>
             </div>
             <div class="step-line"></div>
             <div class="step-dot-wrap" data-step="5">
                 <div class="step-dot">5</div>
-                <div class="step-dot-label">Publish</div>
-            </div>
-            <div class="step-line"></div>
-            <div class="step-dot-wrap" data-step="6">
-                <div class="step-dot">6</div>
                 <div class="step-dot-label">Done</div>
             </div>
         </div>
@@ -236,25 +231,10 @@
             </div>
         </div>
 
-        <!-- STEP 3 — choose the destination hub -->
-        <div id="step-panel-hub" class="wizard-panel hidden">
-            <h2 class="wizard-panel-title">Where do you want to save the optimized dataset?</h2>
-            <p class="wizard-panel-desc">GeoSync will query this hub&rsquo;s existing datasets in the next step, so pick the hub that should own the optimized data.</p>
-            <input id="hub-search-input" class="text-input hub-search-input" type="text" placeholder="Search hubs&hellip;">
-            <div id="hub-list" class="option-list">
-                <p class="option-list-empty">Loading your hubs&hellip;</p>
-            </div>
-            <div id="hub-error" class="wizard-error hidden"></div>
-            <div class="wizard-actions">
-                <button id="hub-back-btn" class="btn btn-ghost" type="button">Back</button>
-                <button id="hub-next-btn" class="btn btn-accent" disabled>Continue</button>
-            </div>
-        </div>
-
-        <!-- STEP 4 — choose or create the destination dataset -->
+        <!-- STEP 3 — choose or create the destination dataset (destination hub is fixed to FI Demo) -->
         <div id="step-panel-dataset" class="wizard-panel hidden">
             <h2 class="wizard-panel-title">Choose a dataset in <span id="dataset-hub-name">&hellip;</span></h2>
-            <p class="wizard-panel-desc">Attach the optimized resource to an existing dataset, or spin up a new one for it.</p>
+            <p class="wizard-panel-desc">Attach the optimized resource to an existing dataset, or spin up a new one for it. GeoSync only publishes back to the <strong>FI Demo</strong> hub, so production hubs stay untouched.</p>
             <div id="dataset-list" class="option-list">
                 <p class="option-list-empty">Loading datasets&hellip;</p>
             </div>
@@ -284,7 +264,7 @@
             </div>
         </div>
 
-        <!-- STEP 5 — review the auto-filled optimized resource & publish -->
+        <!-- STEP 4 — review the auto-filled optimized resource & publish -->
         <div id="step-panel-resource" class="wizard-panel hidden">
             <h2 class="wizard-panel-title">Optimize &amp; publish to <span id="resource-dataset-name">&hellip;</span></h2>
             <p class="wizard-panel-desc">Pre-filled from the source resource &mdash; adjust anything before publishing.</p>
@@ -330,7 +310,7 @@
             </div>
         </div>
 
-        <!-- STEP 6 — done -->
+        <!-- STEP 5 — done -->
         <div id="step-panel-done" class="wizard-panel hidden">
             <div class="done-check">&#10003;</div>
             <h2 class="wizard-panel-title">Optimized dataset published</h2>
@@ -453,15 +433,8 @@
                     <div class="ref-item">
                         <span class="ref-method ref-get">GQL</span>
                         <div class="ref-details">
-                            <code>Hubs</code>
-                            <span>Populates Step 3 with hubs you belong to</span>
-                        </div>
-                    </div>
-                    <div class="ref-item">
-                        <span class="ref-method ref-get">GQL</span>
-                        <div class="ref-details">
                             <code>DatasetsForHub</code>
-                            <span>Lists the chosen destination hub&rsquo;s existing datasets in Step 4</span>
+                            <span>Lists existing datasets in the fixed FI Demo destination hub for Step 3</span>
                         </div>
                     </div>
                     <div class="ref-item">
